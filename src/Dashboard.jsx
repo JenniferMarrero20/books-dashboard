@@ -1,21 +1,32 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import {
+  ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
+  PieChart, Pie, Cell, Legend,
+} from "recharts";
 
-// helper: build a cover URL if cover_i exists
+const PIE_COLORS = ["#4f46e5", "#22c55e", "#f59e0b", "#ef4444", "#0ea5e9"];
+
+function workIdFromKey(key) {
+  return (key || "").split("/").pop();
+}
+
 function coverUrl(cover_i, size = "M") {
   return cover_i ? `https://covers.openlibrary.org/b/id/${cover_i}-${size}.jpg` : null;
 }
 
 export default function Dashboard() {
-  // state
+  
   const [rawBooks, setRawBooks] = useState([]);        // full results from API
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  // controls
+
   const [search, setSearch] = useState("fantasy");     // default query to load something interesting
   const [author, setAuthor] = useState("All");         // filter dropdown
 
-  // fetch on mount + when search changes
+  
   useEffect(() => {
     let ignore = false;
     async function fetchBooks() {
@@ -23,13 +34,13 @@ export default function Dashboard() {
         setLoading(true);
         setError("");
         // OpenLibrary Search API
-        // q = search string, limit = 50 to ensure we have >= 10 rows
+        
         const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(search)}&limit=50`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (ignore) return;
 
-        // we’ll normalize a subset of fields we care about
+        
         const normalized = (data.docs || []).map(d => ({
           key: d.key, // e.g. "/works/OL82563W"
           title: d.title,
@@ -65,7 +76,7 @@ export default function Dashboard() {
     return rawBooks.filter(b => b.authorNames.includes(author));
   }, [rawBooks, author]);
 
-  // summary statistics (based on filtered results or full results — rubric allows either)
+  // summary statistics (based on filtered results or full results 
   const stats = useMemo(() => {
     const arr = filtered;
     const total = arr.length;
@@ -90,6 +101,33 @@ export default function Dashboard() {
 
     return { total, earliest, latest, avgYear, topAuthor };
   }, [filtered]);
+// Chart 1: books by decade (from filtered list)
+const booksByDecade = useMemo(() => {
+  const counts = {};
+  filtered.forEach(b => {
+    if (!b.year) return;
+    const decade = Math.floor(b.year / 10) * 10; // e.g., 1997 -> 1990
+    counts[decade] = (counts[decade] || 0) + 1;
+  });
+  return Object.entries(counts)
+    .map(([decade, count]) => ({ decade: Number(decade), count }))
+    .sort((a, b) => a.decade - b.decade);
+}, [filtered]);
+
+// Chart 2: top 5 authors by frequency (from filtered list)
+const topAuthors = useMemo(() => {
+  const map = {};
+  filtered.forEach(b => {
+    (b.authorNames || []).forEach(a => {
+      map[a] = (map[a] || 0) + 1;
+    });
+  });
+  const arr = Object.entries(map)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+  return arr;
+}, [filtered]);
 
   return (
     <div className="container">
@@ -140,6 +178,52 @@ export default function Dashboard() {
       {!loading && !error && filtered.length === 0 && (
         <div className="status">No results. Try a different search or author.</div>
       )}
+{/* Charts (place between cards and list) */}
+<section className="charts">
+  <div className="chart-card">
+    <h3 className="chart-title">Books by Decade</h3>
+    {booksByDecade.length === 0 ? (
+      <div className="status">No year data available for this query.</div>
+    ) : (
+      <ResponsiveContainer width="100%" height={280}>
+        <BarChart data={booksByDecade} margin={{ top: 8, right: 12, bottom: 8, left: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="decade" tickFormatter={(d) => `${d}s`} />
+          <YAxis allowDecimals={false} />
+          <Tooltip formatter={(v) => [`${v}`, "Books"]} labelFormatter={(d) => `${d}s`} />
+          <Bar dataKey="count" />
+        </BarChart>
+      </ResponsiveContainer>
+    )}
+  </div>
+
+  <div className="chart-card">
+    <h3 className="chart-title">Top Authors (filtered)</h3>
+    {topAuthors.length === 0 ? (
+      <div className="status">No author data available for this query.</div>
+    ) : (
+      <ResponsiveContainer width="100%" height={280}>
+        <PieChart>
+          <Pie
+            data={topAuthors}
+            dataKey="count"
+            nameKey="name"
+            innerRadius={50}
+            outerRadius={100}
+            paddingAngle={2}
+            label={(e) => `${e.name} (${e.count})`}
+          >
+            {topAuthors.map((_, i) => (
+              <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+            ))}
+          </Pie>
+          <Legend />
+          <Tooltip />
+        </PieChart>
+      </ResponsiveContainer>
+    )}
+  </div>
+</section>
 
       {/* List (≥ 10 rows, ≥ 2 features per row) */}
       {!loading && !error && filtered.length > 0 && (
@@ -160,7 +244,15 @@ export default function Dashboard() {
                   <div className="thumb placeholder">No cover</div>
                 )}
               </div>
-              <div className="title">{b.title || "Untitled"}</div>
+              <div className="title">
+  <Link
+    to={`/book/${workIdFromKey(b.key)}`}
+    style={{ color: "#4f46e5", textDecoration: "none" }}
+  >
+    {b.title || "Untitled"}
+  </Link>
+</div>
+
               <div>{b.authorNames.length ? b.authorNames.join(", ") : "—"}</div>
               <div>{b.year || "—"}</div>
               <div className="subjects">
