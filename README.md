@@ -51,6 +51,12 @@ GIF created with LICEcap...
 
 ## Week 7 – Data Dashboard Part 2
 
+<img
+  src="https://raw.githubusercontent.com/JenniferMarrero20/books-dashboard/main/WEB102_Week7_Jennifer_Marrero.gif"
+  width="600"
+  alt="Week 7 walkthrough demo"
+/>
+
 - [x] React Router with unique routes: `/` (dashboard), `/book/:workId` (detail)
 - [x] Clicking an item opens a detail view with extra info (description, subjects, excerpts)
 - [x] The same sidebar UI is displayed on dashboard and detail (disabled on detail)
