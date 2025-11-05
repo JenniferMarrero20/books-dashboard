@@ -49,9 +49,20 @@ GIF created with LICEcap...
 [ScreenToGif](https://www.screentogif.com/) for Windows
 [peek](https://github.com/phw/peek) for Linux. -->
 
-## Notes
+## Week 7 – Data Dashboard Part 2
 
-Describe any challenges encountered while building the app.
+- [x] React Router with unique routes: `/` (dashboard), `/book/:workId` (detail)
+- [x] Clicking an item opens a detail view with extra info (description, subjects, excerpts)
+- [x] The same sidebar UI is displayed on dashboard and detail (disabled on detail)
+- [x] Two charts on the dashboard:
+  - Bar: Books by decade (from filtered results)
+  - Pie: Top 5 authors (from filtered results)
+
+### Notes
+In this unit I learned how to use React Router (`Routes`, `Route`, `Link`, `useParams`) and integrate `recharts`. My biggest challenge was normalizing OpenLibrary data and deriving chart series from filtered results.
+
+
+
 
 ## License
 
